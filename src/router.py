@@ -16,6 +16,16 @@ def route(event):
             to_date=query_params.get("to"),
         )
 
+    if method == "OPTIONS":
+        return {
+            "statusCode": HTTPStatus.NO_CONTENT,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "GET,OPTIONS",
+            },
+        }
+
     return {
         "statusCode": HTTPStatus.METHOD_NOT_ALLOWED,
         "headers": {

@@ -10,3 +10,11 @@ data "archive_file" "lambda_zip" {
     "**/*.pyc",
   ]
 }
+
+data "aws_caller_identity" "current" {}
+
+data "aws_partition" "current" {}
+
+data "aws_dynamodb_table" "url_stats" {
+  name = var.stats_table_name
+}

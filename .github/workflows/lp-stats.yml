@@ -1,0 +1,46 @@
+name: Deploy stats lambda
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/lp-stats.yml"
+      - "src/**"
+      - "requirements.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build package
+        run: |
+          rm -rf package function.zip
+          mkdir package
+          pip install -r requirements.txt -t package
+          cp -R src/. package/
+          cd package
+          zip -r ../function.zip .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update Lambda code
+        run: aws lambda update-function-code --function-name "${{ secrets.LAMBDA_STATS_FUNCTION }}" --zip-file fileb://function.zip

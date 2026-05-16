@@ -1,9 +1,12 @@
 __pycache__/
 *.pyc
 .venv/
+package/
+function.zip
 .env
 terraform/.terraform/
 terraform/.terraform.lock.hcl
 terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/lambda.zip
+terraform/*.tfvars

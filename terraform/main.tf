@@ -3,32 +3,6 @@ locals {
   api_execution_arn = "arn:${data.aws_partition.current.partition}:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.api_gateway_id}"
 }
 
-data "aws_caller_identity" "current" {}
-
-data "aws_partition" "current" {}
-
-resource "aws_dynamodb_table" "url_stats" {
-  name         = var.stats_table_name
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "codigo"
-  range_key    = "fecha"
-
-  attribute {
-    name = "codigo"
-    type = "S"
-  }
-
-  attribute {
-    name = "fecha"
-    type = "S"
-  }
-
-  tags = {
-    Project     = var.project_name
-    Environment = var.environment
-  }
-}
-
 resource "aws_iam_role" "lambda_role" {
   name = "${local.resource_prefix}-lambda-role"
 
@@ -65,7 +39,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
       {
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = aws_dynamodb_table.url_stats.arn
+        Resource = data.aws_dynamodb_table.url_stats.arn
       }
     ]
   })
@@ -83,7 +57,7 @@ resource "aws_lambda_function" "stats" {
 
   environment {
     variables = {
-      STATS_TABLE_NAME = aws_dynamodb_table.url_stats.name
+      STATS_TABLE_NAME = data.aws_dynamodb_table.url_stats.name
     }
   }
 }

@@ -1,9 +1,10 @@
 import json
 import sys
+import types
 import unittest
 from datetime import date
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -105,13 +106,42 @@ class StatsServiceTest(unittest.TestCase):
         repository.get_stats.assert_called_once_with("Ab3xY9", "2026-05-16", "2026-05-16")
 
     def test_repository_queries_dynamodb_by_code_and_date_range(self):
+        class FakeCondition:
+            def __init__(self, value):
+                self.value = value
+
+            def __and__(self, other):
+                return FakeCondition(("and", self.value, other.value))
+
+        class FakeKey:
+            def __init__(self, name: str):
+                self.name = name
+
+            def eq(self, value: str):
+                return FakeCondition(("eq", self.name, value))
+
+            def between(self, start: str, end: str):
+                return FakeCondition(("between", self.name, start, end))
+
         table = MagicMock()
         table.query.return_value = {"Items": [{"codigo": "Ab3xY9", "fecha": "2026-05-16", "clicks": 2}]}
         dynamodb = MagicMock()
         dynamodb.Table.return_value = table
 
         repository = StatsRepository(table_name="url_stats", dynamodb_resource=dynamodb)
-        items = repository.get_stats("Ab3xY9", "2026-05-01", "2026-05-16")
+        fake_conditions = types.SimpleNamespace(Key=FakeKey)
+        fake_dynamodb = types.SimpleNamespace(conditions=fake_conditions)
+        fake_boto3 = types.SimpleNamespace(dynamodb=fake_dynamodb)
+
+        with patch.dict(
+            sys.modules,
+            {
+                "boto3": fake_boto3,
+                "boto3.dynamodb": fake_dynamodb,
+                "boto3.dynamodb.conditions": fake_conditions,
+            },
+        ):
+            items = repository.get_stats("Ab3xY9", "2026-05-01", "2026-05-16")
 
         dynamodb.Table.assert_called_once_with("url_stats")
         table.query.assert_called_once()
