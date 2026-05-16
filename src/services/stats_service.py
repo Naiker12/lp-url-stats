@@ -69,6 +69,9 @@ class StatsService:
     def _response(status_code: HTTPStatus, payload: dict) -> dict:
         return {
             "statusCode": int(status_code),
-            "headers": {"Content-Type": "application/json"},
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+            },
             "body": json.dumps(payload),
         }

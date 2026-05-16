@@ -14,6 +14,9 @@ def lambda_handler(event, context):
         logger.exception("Unhandled error while processing stats request")
         return {
             "statusCode": 500,
-            "headers": {"Content-Type": "application/json"},
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+            },
             "body": json.dumps({"message": "Internal server error"}),
         }

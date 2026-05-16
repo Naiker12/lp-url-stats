@@ -18,6 +18,9 @@ def route(event):
 
     return {
         "statusCode": HTTPStatus.METHOD_NOT_ALLOWED,
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+        },
         "body": json.dumps({"message": "Method not allowed"}),
     }
