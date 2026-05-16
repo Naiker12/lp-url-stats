@@ -36,11 +36,22 @@ Cuando un codigo no tiene visitas en el rango, `daily` vuelve como `[]` y `total
 ```powershell
 python -m venv .venv
 pip install -r requirements.txt
-$env:STATS_TABLE_NAME="url_stats"
+$env:STATS_TABLE_NAME="lp-url-stats-dev-url-stats"
 python -m unittest discover tests
 ```
 
 ## Deploy
+
+Primero crea `terraform/terraform.tfvars` con el id real del API Gateway. El id es la parte de la URL antes de `.execute-api`.
+
+Ejemplo para `https://fqltkzf336.execute-api.us-east-1.amazonaws.com`:
+
+```hcl
+aws_region       = "us-east-1"
+environment      = "dev"
+stats_table_name = "lp-url-stats-dev-url-stats"
+api_gateway_id   = "fqltkzf336"
+```
 
 ```bash
 terraform init
@@ -59,5 +70,6 @@ terraform destroy
 ## Recursos creados
 
 - Lambda Python 3.12.
+- Tabla DynamoDB para estadisticas diarias con PK `codigo` y SK `fecha`.
 - IAM role con permisos minimos de logs y `dynamodb:Query`.
 - Ruta `GET /stats/{codigo}` en API Gateway HTTP API existente.

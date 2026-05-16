@@ -13,12 +13,17 @@ variable "project_name" {
 variable "stats_table_name" {
   description = "DynamoDB table name for daily URL statistics."
   type        = string
-  default     = "url_stats"
+  default     = "lp-url-stats-dev-url-stats"
 }
 
 variable "api_gateway_id" {
   description = "Existing HTTP API Gateway id where the stats route will be attached."
   type        = string
+
+  validation {
+    condition     = can(regex("^[a-z0-9]{10}$", var.api_gateway_id))
+    error_message = "api_gateway_id must be the 10-character API id from the execute-api URL, for example fqltkzf336."
+  }
 }
 
 variable "environment" {
