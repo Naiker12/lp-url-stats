@@ -1,0 +1,4 @@
+aws_region       = "us-east-1"
+environment      = "dev"
+stats_table_name = "url_stats"
+api_gateway_id   = "REEMPLAZA_CON_TU_API_GATEWAY_ID"
