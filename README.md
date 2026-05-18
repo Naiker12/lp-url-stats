@@ -14,16 +14,16 @@ Si no envias `from` ni `to`, el servicio consulta los ultimos 30 dias.
 
 ```json
 {
-  "codigo": "Ab3xY9",
-  "total_clicks": 8,
+  "codigo": "<CODIGO>",
+  "total_clicks": 0,
   "daily": [
     {
-      "fecha": "2026-05-14",
-      "clicks": 3
+      "fecha": "<YYYY-MM-DD>",
+      "clicks": 0
     },
     {
-      "fecha": "2026-05-15",
-      "clicks": 5
+      "fecha": "<YYYY-MM-DD>",
+      "clicks": 0
     }
   ]
 }
@@ -36,7 +36,7 @@ Cuando un codigo no tiene visitas en el rango, `daily` vuelve como `[]` y `total
 ```powershell
 python -m venv .venv
 pip install -r requirements.txt
-$env:STATS_TABLE_NAME="lp-url-stats-dev-url-stats"
+$env:STATS_TABLE_NAME="<TABLA_STATS>"
 python -m unittest discover tests
 ```
 
@@ -44,13 +44,11 @@ python -m unittest discover tests
 
 Primero crea `terraform/terraform.tfvars` con el id real del API Gateway. El id es la parte de la URL antes de `.execute-api`.
 
-Ejemplo para `https://fqltkzf336.execute-api.us-east-1.amazonaws.com`:
-
 ```hcl
-aws_region       = "us-east-1"
-environment      = "dev"
-stats_table_name = "lp-url-stats-dev-url-stats"
-api_gateway_id   = "fqltkzf336"
+aws_region       = "<REGION_AWS>"
+environment      = "<AMBIENTE>"
+stats_table_name = "<TABLA_STATS>"
+api_gateway_id   = "<API_GATEWAY_ID>"
 ```
 
 ```bash
@@ -70,6 +68,6 @@ terraform destroy
 ## Recursos creados
 
 - Lambda Python 3.12.
-- Tabla DynamoDB para estadisticas diarias con PK `codigo` y SK `fecha`.
+- Integracion con la tabla DynamoDB compartida de estadisticas diarias con PK `codigo` y SK `fecha`.
 - IAM role con permisos minimos de logs y `dynamodb:Query`.
 - Ruta `GET /stats/{codigo}` en API Gateway HTTP API existente.

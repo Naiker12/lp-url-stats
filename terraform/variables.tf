@@ -19,7 +19,7 @@ variable "api_gateway_id" {
 
   validation {
     condition     = can(regex("^[a-z0-9]{10}$", var.api_gateway_id))
-    error_message = "api_gateway_id must be the 10-character API id from the execute-api URL, for example fqltkzf336."
+    error_message = "api_gateway_id must be the 10-character API id from the execute-api URL."
   }
 }
 
