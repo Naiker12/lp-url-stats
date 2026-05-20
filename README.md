@@ -37,6 +37,7 @@ Cuando un codigo no tiene visitas en el rango, `daily` vuelve como `[]` y `total
 python -m venv .venv
 pip install -r requirements.txt
 $env:STATS_TABLE_NAME="<TABLA_STATS>"
+$env:URL_TABLE_NAME="<TABLA_URLS>"
 python -m unittest discover tests
 ```
 
@@ -48,6 +49,7 @@ Primero crea `terraform/terraform.tfvars` con el id real del API Gateway. El id 
 aws_region       = "<REGION_AWS>"
 environment      = "<AMBIENTE>"
 stats_table_name = "<TABLA_STATS>"
+url_table_name   = "<TABLA_URLS>"
 api_gateway_id   = "<API_GATEWAY_ID>"
 ```
 
@@ -62,6 +64,7 @@ terraform destroy
 ## Variables necesarias
 
 - `stats_table_name`: tabla DynamoDB de estadisticas diarias, con PK `codigo` y SK `fecha`.
+- `url_table_name`: tabla DynamoDB de URLs acortadas, con PK `codigo`.
 - `api_gateway_id`: id del HTTP API existente donde se agrega `GET /stats/{codigo}`.
 - `environment`: ambiente usado para nombrar recursos.
 
@@ -69,5 +72,6 @@ terraform destroy
 
 - Lambda Python 3.12.
 - Integracion con la tabla DynamoDB compartida de estadisticas diarias con PK `codigo` y SK `fecha`.
-- IAM role con permisos minimos de logs y `dynamodb:Query`.
+- Validacion contra la tabla DynamoDB de URLs acortadas para diferenciar codigos inexistentes.
+- IAM role con permisos minimos de logs, `dynamodb:Query` y `dynamodb:GetItem`.
 - Ruta `GET /stats/{codigo}` en API Gateway HTTP API existente.

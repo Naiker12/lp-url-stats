@@ -40,6 +40,11 @@ resource "aws_iam_role_policy" "lambda_policy" {
         Effect   = "Allow"
         Action   = "dynamodb:Query"
         Resource = data.aws_dynamodb_table.url_stats.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = "dynamodb:GetItem"
+        Resource = data.aws_dynamodb_table.urls.arn
       }
     ]
   })
@@ -58,6 +63,7 @@ resource "aws_lambda_function" "stats" {
   environment {
     variables = {
       STATS_TABLE_NAME = data.aws_dynamodb_table.url_stats.name
+      URL_TABLE_NAME   = data.aws_dynamodb_table.urls.name
     }
   }
 }

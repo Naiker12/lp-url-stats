@@ -13,6 +13,11 @@ variable "stats_table_name" {
   type        = string
 }
 
+variable "url_table_name" {
+  description = "DynamoDB table name for URL records."
+  type        = string
+}
+
 variable "api_gateway_id" {
   description = "Existing HTTP API Gateway id where the stats route will be attached."
   type        = string

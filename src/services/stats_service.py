@@ -30,6 +30,9 @@ class StatsService:
                 {"message": "from and to must use YYYY-MM-DD and from must be less than or equal to to"},
             )
 
+        if not self.repository.url_exists(code):
+            return self._response(HTTPStatus.NOT_FOUND, {"message": "codigo not found", "code": code})
+
         start_date, end_date = date_range
         items = self.repository.get_stats(code, start_date.isoformat(), end_date.isoformat())
         daily = [

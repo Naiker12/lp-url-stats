@@ -27,6 +27,7 @@ def build_event(code: str | None = "Ab3xY9", method: str = "GET", query_params: 
 class StatsServiceTest(unittest.TestCase):
     def test_valid_range_returns_total_and_daily_entries(self):
         repository = MagicMock()
+        repository.url_exists.return_value = True
         repository.get_stats.return_value = [
             {"codigo": "Ab3xY9", "fecha": "2026-05-14", "clicks": 3},
             {"codigo": "Ab3xY9", "fecha": "2026-05-15", "clicks": 5},
@@ -54,6 +55,7 @@ class StatsServiceTest(unittest.TestCase):
 
     def test_without_dates_uses_last_30_days(self):
         repository = MagicMock()
+        repository.url_exists.return_value = True
         repository.get_stats.return_value = []
 
         response = StatsService(repository=repository, today=date(2026, 5, 16)).get_stats("Ab3xY9")
@@ -64,6 +66,7 @@ class StatsServiceTest(unittest.TestCase):
 
     def test_code_without_visits_returns_empty_daily_array(self):
         repository = MagicMock()
+        repository.url_exists.return_value = True
         repository.get_stats.return_value = []
 
         response = StatsService(repository=repository).get_stats(
@@ -74,6 +77,20 @@ class StatsServiceTest(unittest.TestCase):
 
         self.assertEqual(response["statusCode"], 200)
         self.assertEqual(parse_body(response), {"codigo": "NoHits", "total_clicks": 0, "daily": []})
+
+    def test_unknown_code_returns_not_found(self):
+        repository = MagicMock()
+        repository.url_exists.return_value = False
+
+        response = StatsService(repository=repository).get_stats(
+            "Missing",
+            from_date="2026-05-01",
+            to_date="2026-05-16",
+        )
+
+        self.assertEqual(response["statusCode"], 404)
+        self.assertEqual(parse_body(response), {"message": "codigo not found", "code": "Missing"})
+        repository.get_stats.assert_not_called()
 
     def test_invalid_range_returns_bad_request_before_repository_call(self):
         repository = MagicMock()
@@ -89,6 +106,7 @@ class StatsServiceTest(unittest.TestCase):
 
     def test_router_extracts_code_and_query_parameters(self):
         repository = MagicMock()
+        repository.url_exists.return_value = True
         repository.get_stats.return_value = [{"codigo": "Ab3xY9", "fecha": "2026-05-16", "clicks": 2}]
 
         original_init = StatsService.__init__
@@ -128,7 +146,7 @@ class StatsServiceTest(unittest.TestCase):
         dynamodb = MagicMock()
         dynamodb.Table.return_value = table
 
-        repository = StatsRepository(table_name="url_stats", dynamodb_resource=dynamodb)
+        repository = StatsRepository(table_name="url_stats", url_table_name="urls", dynamodb_resource=dynamodb)
         fake_conditions = types.SimpleNamespace(Key=FakeKey)
         fake_dynamodb = types.SimpleNamespace(conditions=fake_conditions)
         fake_boto3 = types.SimpleNamespace(dynamodb=fake_dynamodb)
@@ -146,6 +164,18 @@ class StatsServiceTest(unittest.TestCase):
         dynamodb.Table.assert_called_once_with("url_stats")
         table.query.assert_called_once()
         self.assertEqual(items, [{"codigo": "Ab3xY9", "fecha": "2026-05-16", "clicks": 2}])
+
+    def test_repository_checks_url_table_by_code(self):
+        table = MagicMock()
+        table.get_item.return_value = {"Item": {"codigo": "Ab3xY9"}}
+        dynamodb = MagicMock()
+        dynamodb.Table.return_value = table
+
+        repository = StatsRepository(table_name="url_stats", url_table_name="urls", dynamodb_resource=dynamodb)
+
+        self.assertTrue(repository.url_exists("Ab3xY9"))
+        dynamodb.Table.assert_called_once_with("urls")
+        table.get_item.assert_called_once_with(Key={"codigo": "Ab3xY9"})
 
     def test_non_get_method_returns_method_not_allowed(self):
         response = route(build_event(method="POST"))
