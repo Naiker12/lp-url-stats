@@ -42,3 +42,21 @@ class StatsRepository:
             KeyConditionExpression=Key("codigo").eq(code) & Key("fecha").between(from_date, to_date)
         )
         return response.get("Items", [])
+
+    def get_all_stats(self, from_date: str, to_date: str) -> list[dict]:
+        from boto3.dynamodb.conditions import Attr
+
+        items: list[dict] = []
+        scan_kwargs = {
+            "FilterExpression": Attr("fecha").between(from_date, to_date),
+        }
+
+        while True:
+            response = self.table.scan(**scan_kwargs)
+            items.extend(response.get("Items", []))
+
+            last_key = response.get("LastEvaluatedKey")
+            if not last_key:
+                return items
+
+            scan_kwargs["ExclusiveStartKey"] = last_key

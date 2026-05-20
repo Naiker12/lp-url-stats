@@ -64,6 +64,36 @@ class StatsServiceTest(unittest.TestCase):
         self.assertEqual(parse_body(response), {"codigo": "Ab3xY9", "total_clicks": 0, "daily": []})
         repository.get_stats.assert_called_once_with("Ab3xY9", "2026-04-17", "2026-05-16")
 
+    def test_without_code_returns_aggregated_stats_for_all_urls(self):
+        repository = MagicMock()
+        repository.get_all_stats.return_value = [
+            {"codigo": "Ab3xY9", "fecha": "2026-05-14", "clicks": 3},
+            {"codigo": "Zz9kP2", "fecha": "2026-05-14", "clicks": 2},
+            {"codigo": "Ab3xY9", "fecha": "2026-05-15", "clicks": 5},
+        ]
+
+        response = StatsService(repository=repository).get_stats(
+            None,
+            from_date="2026-05-14",
+            to_date="2026-05-15",
+        )
+
+        self.assertEqual(response["statusCode"], 200)
+        self.assertEqual(
+            parse_body(response),
+            {
+                "codigo": "all",
+                "total_clicks": 10,
+                "daily": [
+                    {"fecha": "2026-05-14", "clicks": 5},
+                    {"fecha": "2026-05-15", "clicks": 5},
+                ],
+            },
+        )
+        repository.get_all_stats.assert_called_once_with("2026-05-14", "2026-05-15")
+        repository.url_exists.assert_not_called()
+        repository.get_stats.assert_not_called()
+
     def test_code_without_visits_returns_empty_daily_array(self):
         repository = MagicMock()
         repository.url_exists.return_value = True
@@ -123,6 +153,24 @@ class StatsServiceTest(unittest.TestCase):
         self.assertEqual(response["statusCode"], 200)
         repository.get_stats.assert_called_once_with("Ab3xY9", "2026-05-16", "2026-05-16")
 
+    def test_router_allows_stats_without_code(self):
+        repository = MagicMock()
+        repository.get_all_stats.return_value = [{"codigo": "Ab3xY9", "fecha": "2026-05-16", "clicks": 2}]
+
+        original_init = StatsService.__init__
+
+        def init_with_repository(self):
+            original_init(self, repository=repository)
+
+        StatsService.__init__ = init_with_repository
+        try:
+            response = route(build_event(code=None, query_params={"from": "2026-05-16", "to": "2026-05-16"}))
+        finally:
+            StatsService.__init__ = original_init
+
+        self.assertEqual(response["statusCode"], 200)
+        repository.get_all_stats.assert_called_once_with("2026-05-16", "2026-05-16")
+
     def test_repository_queries_dynamodb_by_code_and_date_range(self):
         class FakeCondition:
             def __init__(self, value):
@@ -164,6 +212,54 @@ class StatsServiceTest(unittest.TestCase):
         dynamodb.Table.assert_called_once_with("url_stats")
         table.query.assert_called_once()
         self.assertEqual(items, [{"codigo": "Ab3xY9", "fecha": "2026-05-16", "clicks": 2}])
+
+    def test_repository_scans_dynamodb_by_date_range_for_all_urls(self):
+        class FakeCondition:
+            def __init__(self, value):
+                self.value = value
+
+        class FakeAttr:
+            def __init__(self, name: str):
+                self.name = name
+
+            def between(self, start: str, end: str):
+                return FakeCondition(("between", self.name, start, end))
+
+        table = MagicMock()
+        table.scan.side_effect = [
+            {
+                "Items": [{"codigo": "Ab3xY9", "fecha": "2026-05-16", "clicks": 2}],
+                "LastEvaluatedKey": {"codigo": "Ab3xY9", "fecha": "2026-05-16"},
+            },
+            {"Items": [{"codigo": "Zz9kP2", "fecha": "2026-05-16", "clicks": 4}]},
+        ]
+        dynamodb = MagicMock()
+        dynamodb.Table.return_value = table
+
+        repository = StatsRepository(table_name="url_stats", url_table_name="urls", dynamodb_resource=dynamodb)
+        fake_conditions = types.SimpleNamespace(Attr=FakeAttr)
+        fake_dynamodb = types.SimpleNamespace(conditions=fake_conditions)
+        fake_boto3 = types.SimpleNamespace(dynamodb=fake_dynamodb)
+
+        with patch.dict(
+            sys.modules,
+            {
+                "boto3": fake_boto3,
+                "boto3.dynamodb": fake_dynamodb,
+                "boto3.dynamodb.conditions": fake_conditions,
+            },
+        ):
+            items = repository.get_all_stats("2026-05-01", "2026-05-16")
+
+        dynamodb.Table.assert_called_once_with("url_stats")
+        self.assertEqual(table.scan.call_count, 2)
+        self.assertEqual(
+            items,
+            [
+                {"codigo": "Ab3xY9", "fecha": "2026-05-16", "clicks": 2},
+                {"codigo": "Zz9kP2", "fecha": "2026-05-16", "clicks": 4},
+            ],
+        )
 
     def test_repository_checks_url_table_by_code(self):
         table = MagicMock()

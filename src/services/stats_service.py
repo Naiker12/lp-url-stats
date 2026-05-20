@@ -20,9 +20,6 @@ class StatsService:
         self.today = today or datetime.now(UTC).date()
 
     def get_stats(self, code: str | None, from_date: str | None = None, to_date: str | None = None) -> dict:
-        if not code:
-            return self._response(HTTPStatus.BAD_REQUEST, {"message": "codigo is required"})
-
         date_range = self._resolve_date_range(from_date, to_date)
         if date_range is None:
             return self._response(
@@ -30,10 +27,30 @@ class StatsService:
                 {"message": "from and to must use YYYY-MM-DD and from must be less than or equal to to"},
             )
 
+        start_date, end_date = date_range
+
+        if not code:
+            items = self.repository.get_all_stats(start_date.isoformat(), end_date.isoformat())
+            totals_by_date: dict[str, int] = {}
+
+            for item in items:
+                fecha = item["fecha"]
+                totals_by_date[fecha] = totals_by_date.get(fecha, 0) + int(item.get("clicks", 0))
+
+            daily = [
+                DailyEntry(fecha=fecha, clicks=clicks)
+                for fecha, clicks in sorted(totals_by_date.items())
+            ]
+            total_clicks = sum(entry.clicks for entry in daily)
+
+            return self._response(
+                HTTPStatus.OK,
+                StatsResponse(codigo="all", total_clicks=total_clicks, daily=daily).to_dict(),
+            )
+
         if not self.repository.url_exists(code):
             return self._response(HTTPStatus.NOT_FOUND, {"message": "codigo not found", "code": code})
 
-        start_date, end_date = date_range
         items = self.repository.get_stats(code, start_date.isoformat(), end_date.isoformat())
         daily = [
             DailyEntry(fecha=item["fecha"], clicks=int(item.get("clicks", 0)))

@@ -43,6 +43,11 @@ resource "aws_iam_role_policy" "lambda_policy" {
       },
       {
         Effect   = "Allow"
+        Action   = "dynamodb:Scan"
+        Resource = data.aws_dynamodb_table.url_stats.arn
+      },
+      {
+        Effect   = "Allow"
         Action   = "dynamodb:GetItem"
         Resource = data.aws_dynamodb_table.urls.arn
       }
@@ -78,6 +83,12 @@ resource "aws_apigatewayv2_integration" "stats" {
 resource "aws_apigatewayv2_route" "stats" {
   api_id    = var.api_gateway_id
   route_key = "GET /stats/{codigo}"
+  target    = "integrations/${aws_apigatewayv2_integration.stats.id}"
+}
+
+resource "aws_apigatewayv2_route" "stats_all" {
+  api_id    = var.api_gateway_id
+  route_key = "GET /stats"
   target    = "integrations/${aws_apigatewayv2_integration.stats.id}"
 }
 
