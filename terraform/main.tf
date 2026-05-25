@@ -1,6 +1,8 @@
 locals {
   resource_prefix   = "${var.project_name}-${var.environment}"
   api_execution_arn = "arn:${data.aws_partition.current.partition}:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.api_gateway_id}"
+  stats_table_arn   = "arn:${data.aws_partition.current.partition}:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.stats_table_name}"
+  urls_table_arn    = "arn:${data.aws_partition.current.partition}:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.url_table_name}"
 }
 
 resource "aws_iam_role" "lambda_role" {
@@ -39,17 +41,17 @@ resource "aws_iam_role_policy" "lambda_policy" {
       {
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = data.aws_dynamodb_table.url_stats.arn
+        Resource = local.stats_table_arn
       },
       {
         Effect   = "Allow"
         Action   = "dynamodb:Scan"
-        Resource = data.aws_dynamodb_table.url_stats.arn
+        Resource = local.stats_table_arn
       },
       {
         Effect   = "Allow"
         Action   = "dynamodb:GetItem"
-        Resource = data.aws_dynamodb_table.urls.arn
+        Resource = local.urls_table_arn
       }
     ]
   })
@@ -67,8 +69,8 @@ resource "aws_lambda_function" "stats" {
 
   environment {
     variables = {
-      STATS_TABLE_NAME = data.aws_dynamodb_table.url_stats.name
-      URL_TABLE_NAME   = data.aws_dynamodb_table.urls.name
+      STATS_TABLE_NAME = var.stats_table_name
+      URL_TABLE_NAME   = var.url_table_name
     }
   }
 }
